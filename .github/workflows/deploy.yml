@@ -54,6 +54,19 @@ jobs:
     needs: docker-build
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Copy application files to AWS host
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ secrets.AWS_HOST }}
+          username: ${{ secrets.AWS_USER }}
+          key: ${{ secrets.AWS_SSH_KEY }}
+          source: "Dockerfile,requirements.txt,.dockerignore,app,data"
+          target: "/tmp/ragbot-deploy"
+          overwrite: true
+
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -62,14 +75,9 @@ jobs:
           key: ${{ secrets.AWS_SSH_KEY }}
           script: |
             set -e
-            if [ -d "$HOME/ragbot/.git" ]; then
-              git -C "$HOME/ragbot" pull --ff-only origin main
-            elif [ ! -e "$HOME/ragbot" ]; then
-              git clone --depth 1 --branch main https://github.com/tomaskurtenperez/ragbot.git "$HOME/ragbot"
-            else
-              echo "Path $HOME/ragbot exists but is not a Git repository. Move it or configure the deployment path."
-              exit 1
-            fi
+            mkdir -p "$HOME/ragbot"
+            cp -a /tmp/ragbot-deploy/. "$HOME/ragbot/"
+            rm -rf /tmp/ragbot-deploy
             cd "$HOME/ragbot"
             test -f .env || { echo "Missing $HOME/ragbot/.env on the AWS host."; exit 1; }
             docker build -t ragbot-api:latest .
