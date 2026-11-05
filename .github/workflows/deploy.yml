@@ -62,8 +62,16 @@ jobs:
           key: ${{ secrets.AWS_SSH_KEY }}
           script: |
             set -e
+            if [ -d "$HOME/ragbot/.git" ]; then
+              git -C "$HOME/ragbot" pull --ff-only origin main
+            elif [ ! -e "$HOME/ragbot" ]; then
+              git clone --depth 1 --branch main https://github.com/tomaskurtenperez/ragbot.git "$HOME/ragbot"
+            else
+              echo "Path $HOME/ragbot exists but is not a Git repository. Move it or configure the deployment path."
+              exit 1
+            fi
             cd "$HOME/ragbot"
-            git pull origin main
+            test -f .env || { echo "Missing $HOME/ragbot/.env on the AWS host."; exit 1; }
             docker build -t ragbot-api:latest .
             docker rm -f ragbot-api || true
             docker run -d \
