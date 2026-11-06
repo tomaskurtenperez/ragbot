@@ -131,6 +131,7 @@ jobs:
           script: |
             set -e
             mkdir -p "$HOME/ragbot"
+            mkdir -p "$HOME/ragbot/data/chroma_db"
             install -m 600 /tmp/ragbot-deploy/.env "$HOME/ragbot/.env"
             rm -rf /tmp/ragbot-deploy
             cd "$HOME/ragbot"
@@ -145,6 +146,12 @@ jobs:
             echo "$GHCR_TOKEN" | sudo docker login ghcr.io --username "$GHCR_USERNAME" --password-stdin
             sudo docker pull "$IMAGE_NAME:$IMAGE_TAG"
             sudo docker logout ghcr.io
+            sudo docker run --rm \
+              --env-file "$HOME/ragbot/.env" \
+              --mount "type=bind,source=$HOME/ragbot/data/chroma_db,target=/app/data/chroma_db" \
+              --entrypoint python \
+              "$IMAGE_NAME:$IMAGE_TAG" \
+              -c 'from app.db.vector_db import get_collection; collection=get_collection(); count=collection.count(); print(f"Chroma chunks={count}"); raise SystemExit(0 if count else 1)'
             sudo docker run -d \
               --name ragbot-api \
               --restart unless-stopped \
