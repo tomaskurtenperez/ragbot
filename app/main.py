@@ -11,6 +11,7 @@ from app.services.embedding_service import get_embedding_model
 
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 
 @asynccontextmanager

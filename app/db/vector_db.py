@@ -1,4 +1,5 @@
 import re
+import logging
 
 import chromadb
 from rank_bm25 import BM25Okapi
@@ -9,6 +10,7 @@ from app.services.embedding_service import generate_query_embedding
 
 _collection = None
 _bm25_cache = None
+logger = logging.getLogger(__name__)
 
 
 def tokenize(text: str) -> list[str]:
@@ -54,14 +56,42 @@ def build_bm25_index(collection):
 def warm_retriever() -> None:
     """Abre Chroma y prepara BM25 para que la primera consulta no lo haga."""
     collection = get_collection()
+    document_count = collection.count()
     build_bm25_index(collection)
+    if document_count:
+        logger.info(
+            "Retriever ready collection=%s documents=%d path=%s",
+            CHROMA_COLLECTION_NAME,
+            document_count,
+            CHROMA_DB_PATH,
+        )
+    else:
+        logger.warning(
+            "Chroma collection is empty collection=%s path=%s; retrieval will return no context",
+            CHROMA_COLLECTION_NAME,
+            CHROMA_DB_PATH,
+        )
 
 
 async def search_similar(question: str, limit: int = 5) -> list[dict]:
     collection = get_collection()
     document_count = collection.count()
+    logged_query = question.replace("\n", " ")[:500]
     if document_count == 0:
+        logger.warning(
+            "Retrieval returned no results: collection=%s is empty query=%r",
+            CHROMA_COLLECTION_NAME,
+            logged_query,
+        )
         return []
+
+    logger.info(
+        "Retrieval started collection=%s query=%r documents=%d limit=%d",
+        CHROMA_COLLECTION_NAME,
+        logged_query,
+        document_count,
+        limit,
+    )
 
     query_embedding = await generate_query_embedding(question)
     candidate_limit = min(document_count, max(limit * 4, 20))
@@ -73,6 +103,11 @@ async def search_similar(question: str, limit: int = 5) -> list[dict]:
     bm25, all_documents, all_metadatas, all_ids = build_bm25_index(collection)
 
     if bm25 is None:
+        logger.warning(
+            "Retrieval returned no results: BM25 index is empty collection=%s query=%r",
+            CHROMA_COLLECTION_NAME,
+            logged_query,
+        )
         return []
 
     candidates: dict[str, dict] = {}
@@ -140,7 +175,7 @@ async def search_similar(question: str, limit: int = 5) -> list[dict]:
         key=lambda candidate: candidate["rank_score"],
         reverse=True,
     )
-    return [
+    results = [
         {
             "content": candidate["content"],
             "metadata": candidate["metadata"],
@@ -148,3 +183,21 @@ async def search_similar(question: str, limit: int = 5) -> list[dict]:
         }
         for candidate in ranked[:limit]
     ]
+    matches = [
+        {
+            "file": result["metadata"].get("filename")
+            or result["metadata"].get("document_path"),
+            "page": result["metadata"].get("page"),
+            "similarity": round(result["similarity"], 4),
+        }
+        for result in results
+    ]
+    log_method = logger.info if results else logger.warning
+    log_method(
+        "Retrieval finished collection=%s query=%r results=%d matches=%s",
+        CHROMA_COLLECTION_NAME,
+        logged_query,
+        len(results),
+        matches,
+    )
+    return results

@@ -24,3 +24,6 @@ data/documents/*
 .vscode/
 .idea/
 *.log
+
+# Internal tests
+test_api.py
