@@ -134,11 +134,14 @@ jobs:
             install -m 600 /tmp/ragbot-deploy/.env "$HOME/ragbot/.env"
             rm -rf /tmp/ragbot-deploy
             cd "$HOME/ragbot"
-            df -h /
+            echo "Docker pull target: $(hostname) (AWS host)"
+            df -h / "$HOME"
+            sudo docker system df
             sudo docker builder prune --all --force
             sudo docker rm -f ragbot-api || true
             sudo docker image ls "$IMAGE_NAME" --quiet | sort -u | xargs -r sudo docker image rm --force
-            df -h /
+            df -h / "$HOME"
+            sudo docker system df
             echo "$GHCR_TOKEN" | sudo docker login ghcr.io --username "$GHCR_USERNAME" --password-stdin
             sudo docker pull "$IMAGE_NAME:$IMAGE_TAG"
             sudo docker logout ghcr.io
