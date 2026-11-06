@@ -57,13 +57,34 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Create runtime environment file
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "Add GEMINI_API_KEY to the repository Actions secrets."
+            exit 1
+          fi
+          {
+            printf 'GEMINI_API_KEY=%s\n' "$GEMINI_API_KEY"
+            printf 'GEMINI_MODEL=%s\n' 'gemini-3.5-flash-lite'
+            printf 'HF_EMBEDDING_MODEL=%s\n' 'intfloat/multilingual-e5-base'
+            printf 'CHROMA_COLLECTION_NAME=%s\n' 'documents'
+            printf 'LANGFUSE_PUBLIC_KEY=%s\n' "$LANGFUSE_PUBLIC_KEY"
+            printf 'LANGFUSE_SECRET_KEY=%s\n' "$LANGFUSE_SECRET_KEY"
+            printf 'LANGFUSE_BASE_URL=%s\n' 'https://cloud.langfuse.com'
+          } > .env
+          chmod 600 .env
+
       - name: Copy application files to AWS host
         uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.AWS_HOST }}
           username: ${{ secrets.AWS_USER }}
           key: ${{ secrets.AWS_SSH_KEY }}
-          source: "Dockerfile,requirements.txt,.dockerignore,app,data"
+          source: "Dockerfile,requirements.txt,.dockerignore,.env,app,data"
           target: "/tmp/ragbot-deploy"
           overwrite: true
 
