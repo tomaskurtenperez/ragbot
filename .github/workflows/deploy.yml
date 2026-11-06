@@ -101,9 +101,9 @@ jobs:
             rm -rf /tmp/ragbot-deploy
             cd "$HOME/ragbot"
             test -f .env || { echo "Missing $HOME/ragbot/.env on the AWS host."; exit 1; }
-            docker build -t ragbot-api:latest .
-            docker rm -f ragbot-api || true
-            docker run -d \
+            sudo docker build -t ragbot-api:latest .
+            sudo docker rm -f ragbot-api || true
+            sudo docker run -d \
               --name ragbot-api \
               --restart unless-stopped \
               --env-file "$HOME/ragbot/.env" \
