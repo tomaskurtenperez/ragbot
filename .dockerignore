@@ -11,7 +11,7 @@ __pycache__
 .pytest_cache
 .mypy_cache
 .ruff_cache
-data/documents
+data/chroma_db
 test*.py
 docs_test.py
 hugging_test.py

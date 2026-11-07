@@ -24,8 +24,11 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
 
+      - name: Install CPU PyTorch
+        run: python -m pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch
+
       - name: Install dependencies
-        run: python -m pip install -r requirements.txt
+        run: python -m pip install --no-cache-dir -r requirements.txt
 
       - name: Run API tests
         run: python -m unittest test_chat_api -v
@@ -131,7 +134,6 @@ jobs:
           script: |
             set -e
             mkdir -p "$HOME/ragbot"
-            mkdir -p "$HOME/ragbot/data/chroma_db"
             install -m 600 /tmp/ragbot-deploy/.env "$HOME/ragbot/.env"
             rm -rf /tmp/ragbot-deploy
             cd "$HOME/ragbot"
@@ -148,7 +150,6 @@ jobs:
             sudo docker logout ghcr.io
             sudo docker run --rm \
               --env-file "$HOME/ragbot/.env" \
-              --mount "type=bind,source=$HOME/ragbot/data/chroma_db,target=/app/data/chroma_db" \
               --entrypoint python \
               "$IMAGE_NAME:$IMAGE_TAG" \
               -c 'from app.db.vector_db import get_collection; collection=get_collection(); count=collection.count(); print(f"Chroma chunks={count}"); raise SystemExit(0 if count else 1)'
@@ -158,5 +159,4 @@ jobs:
               --env-file "$HOME/ragbot/.env" \
               -p 8000:8000 \
               --mount "type=bind,source=$HOME/.cache/huggingface,target=/root/.cache/huggingface,readonly" \
-              --mount "type=bind,source=$HOME/ragbot/data/chroma_db,target=/app/data/chroma_db" \
               "$IMAGE_NAME:$IMAGE_TAG"
