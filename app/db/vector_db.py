@@ -123,9 +123,7 @@ async def search_similar(question: str, limit: int = 5) -> list[dict]:
     ):
         if not content:
             continue
-        if space == "cosine":
-            similarity = 1 - distance
-        elif space == "ip":
+        if space in {"cosine", "ip"}:
             similarity = 1 - distance
         else:
             # Chroma L2 devuelve distancia euclídea al cuadrado; los vectores

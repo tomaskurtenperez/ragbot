@@ -1,4 +1,4 @@
-"""Indexa los PDFs de data/documents con el modelo local de Hugging Face."""
+"""Indexa los documentos de data/documents (PDF y .txt) con el modelo local de Hugging Face."""
 
 import hashlib
 
@@ -11,7 +11,7 @@ from app.core.config import (
     HF_EMBEDDING_MODEL,
     PROJECT_ROOT,
 )
-from app.services.document_splitter import split_pdf
+from app.services.document_splitter import find_documents, split_document
 from app.services.embedding_service import generate_embeddings, get_embedding_model
 
 
@@ -23,7 +23,7 @@ CHROMA_BATCH_SIZE = 256
 def make_id(chunk: dict) -> str:
     metadata = chunk["metadata"]
     identity = (
-        f"{metadata['document_path']}|{metadata['page']}|"
+        f"{metadata['document_path']}|{metadata.get('page', '')}|"
         f"{metadata['chunk_index']}|{chunk['content']}"
     )
     return hashlib.sha256(identity.encode("utf-8")).hexdigest()
@@ -34,18 +34,18 @@ def ingest() -> None:
     if not DOCUMENTS_DIR.is_dir():
         raise SystemExit(f"No existe la carpeta de documentos: {DOCUMENTS_DIR}")
 
-    pdf_paths = sorted(DOCUMENTS_DIR.rglob("*.pdf"))
-    if not pdf_paths:
-        raise SystemExit(f"No se encontraron PDFs en {DOCUMENTS_DIR}")
+    document_paths = find_documents(DOCUMENTS_DIR)
+    if not document_paths:
+        raise SystemExit(f"No se encontraron documentos en {DOCUMENTS_DIR}")
 
     chunks: list[dict] = []
-    for path in pdf_paths:
-        pdf_chunks = split_pdf(path, DOCUMENTS_DIR)
-        chunks.extend(pdf_chunks)
-        print(f"{path.name}: {len(pdf_chunks)} fragmentos")
+    for path in document_paths:
+        document_chunks = split_document(path, DOCUMENTS_DIR)
+        chunks.extend(document_chunks)
+        print(f"{path.name}: {len(document_chunks)} fragmentos")
 
     if not chunks:
-        raise SystemExit("No se extrajo texto indexable de los PDFs.")
+        raise SystemExit("No se extrajo texto indexable de los documentos.")
 
     model = get_embedding_model()
     print(

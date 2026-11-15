@@ -12,7 +12,8 @@ __pycache__
 .mypy_cache
 .ruff_cache
 data/chroma_db
+tests
+scripts/telegram_bot.py
+scripts/preview_chunks.py
+README.md
 test*.py
-docs_test.py
-hugging_test.py
-ingestion

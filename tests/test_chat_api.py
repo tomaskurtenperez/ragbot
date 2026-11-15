@@ -15,15 +15,18 @@ class ChatApiTests(unittest.TestCase):
         self.client = TestClient(app)
 
     def test_chat_retrieves_context_then_generates_answer(self) -> None:
-        question = "¿Qué experiencia tiene el candidato?"
+        question = "Is the PUT method idempotent?"
         chunks = [
             {
-                "content": "Experiencia en desarrollo de productos de IA.",
-                "metadata": {"filename": "cv.pdf"},
+                "content": "The PUT method is idempotent.",
+                "metadata": {
+                    "filename": "rfc9110-http-semantics.txt",
+                    "section": "9.3.4. PUT",
+                },
                 "similarity": 0.91,
             }
         ]
-        expected_answer = "es medico y bailarin."
+        expected_answer = "Yes, PUT is idempotent (RFC 9110, Section 9.3.4)."
         session_id = f"telegram:chat-1:user-1:{uuid4().hex}"
 
         with (
@@ -52,6 +55,12 @@ class ChatApiTests(unittest.TestCase):
         retrieve.assert_awaited_once_with(question)
         generate_response.assert_awaited_once_with(question, chunks, [])
 
+    def test_health(self) -> None:
+        response = self.client.get("/health")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "ok"})
+
     def test_chat_rejects_empty_question(self) -> None:
         response = self.client.post("/chat", json={"question": ""})
 
@@ -75,6 +84,25 @@ class ChatApiTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 503)
         self.assertIn("GEMINI_API_KEY", response.json()["detail"])
+
+    def test_unexpected_llm_error_is_not_leaked(self) -> None:
+        with (
+            patch("app.services.rag_service.LANGFUSE_ENABLED", False),
+            patch(
+                "app.services.rag_service.retrieve",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch(
+                "app.services.rag_service.generate_response",
+                new_callable=AsyncMock,
+                side_effect=ValueError("internal secret detail"),
+            ),
+        ):
+            response = self.client.post("/chat", json={"question": "Hola"})
+
+        self.assertEqual(response.status_code, 502)
+        self.assertNotIn("internal secret detail", response.json()["detail"])
 
 
 if __name__ == "__main__":

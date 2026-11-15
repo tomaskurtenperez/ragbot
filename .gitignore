@@ -17,6 +17,7 @@ data/chroma_db/**
 data/documents/*
 !data/documents/.gitkeep
 !data/documents/*.pdf
+!data/documents/*.txt
 
 # Tooling and local artifacts
 .pytest_cache/

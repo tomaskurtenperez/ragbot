@@ -1,7 +1,7 @@
 """Prueba online del flujo real Chroma -> Gemini a través de LangGraph.
 
 Ejecución deliberada:
-    RUN_ONLINE_RAG_TESTS=1 python -m unittest test_chat_online -v
+    RUN_ONLINE_RAG_TESTS=1 python -m unittest tests.test_chat_online -v
 
 Requiere GEMINI_API_KEY y una colección Chroma ``documents`` ya poblada.
 """
@@ -33,7 +33,7 @@ class OnlineRAGTests(unittest.TestCase):
 
         question = os.getenv(
             "RAG_ONLINE_TEST_QUESTION",
-            "quien es tomas.",
+            "When must a cache revalidate a stored response before reusing it?",
         )
         result = asyncio.run(
             rag_graph.ainvoke(

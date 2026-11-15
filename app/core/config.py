@@ -7,6 +7,7 @@ load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite").strip()
+GEMINI_MAX_OUTPUT_TOKENS = int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "1024"))
 HF_EMBEDDING_MODEL = os.getenv(
     "HF_EMBEDDING_MODEL", "intfloat/multilingual-e5-base"
 ).strip()

@@ -31,6 +31,16 @@ async def lifespan(app: FastAPI):
         get_client().flush()
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    title="Ragbot API",
+    description=(
+        "Retrieval-Augmented Generation API over IETF web and API standards "
+        "(HTTP, OAuth 2.0, JWT, JSON). "
+        "Hybrid retrieval (multilingual-e5 embeddings + BM25 fused with RRF) "
+        "orchestrated with LangGraph and answered by Gemini."
+    ),
+    version="1.0.0",
+    lifespan=lifespan,
+)
 
 app.include_router(router)
